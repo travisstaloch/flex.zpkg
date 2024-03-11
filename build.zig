@@ -8,14 +8,11 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
-    const is_bsd = target.isDragonFlyBSD() or
-        target.isFreeBSD() or
-        target.isNetBSD() or
-        target.isOpenBSD();
+    const is_bsd = target.result.isBSD();
 
     const is_unix = is_bsd or
-        target.isDarwin() or
-        target.isLinux();
+        target.result.isDarwin() or
+        target.result.os.tag == .linux;
 
     // const is_freestanding = (target.getOsTag() == .freestanding);
 
@@ -133,7 +130,7 @@ pub fn build(b: *std.Build) void {
     exe.defineCMacro("HAVE_CONFIG_H", null);
 
     exe.addIncludePath(BuildHelper.dirname(config_h));
-    exe.addCSourceFiles(&flex_sources, &.{});
+    exe.addCSourceFiles(.{ .files = &flex_sources });
 
     // exe.addCSourceFiles(&lib_sources, &.{});
 
@@ -170,8 +167,8 @@ const BuildHelper = struct {
     pub fn dirname(path: std.Build.LazyPath) std.Build.LazyPath {
         const ComputeStep = struct {
             step: std.Build.Step,
-            input: std.build.LazyPath,
-            output: std.build.GeneratedFile,
+            input: std.Build.LazyPath,
+            output: std.Build.GeneratedFile,
 
             fn make(step: *std.Build.Step, progress: *std.Progress.Node) !void {
                 _ = progress;
@@ -208,6 +205,7 @@ const BuildHelper = struct {
                 path.addStepDependencies(&child.step);
                 return std.Build.LazyPath{ .generated = &child.output };
             },
+            .generated_dirname, .dependency => unreachable, // TODO
         }
     }
 };
